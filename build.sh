@@ -9,7 +9,7 @@ if [ "$(docker inspect -f '{{.State.Running}}' aais 2>/dev/null)" = "true" ]; th
     echo "Container aais already running"
 else
     docker rm -f aais >/dev/null 2>&1 || true
-    docker run -d -p 8080:8080 --name aais aais:1.0
+    docker run -d -p 8080:8080 --user 11111 --name aais aais:1.0
 fi
 
 echo Waiting for server ...
@@ -26,6 +26,13 @@ if [ "$ready" -ne 1 ]; then
     exit 1
 fi
 
-curl http://localhost:8080/health
+echo Ask ...
+if curl -sf http://localhost:8080/health >/dev/null; then
+    sh ./ask.sh "Число Пи (π) с точностью до 5 знаков после десятичной точки"
+fi
+
+echo Save image ...
 curl --compressed http://localhost:8080/v1/models
-#docker save aais:1.0 | gzip > aais.tar.gz
+[ -f aais.tar.gz ] || docker save aais:1.0 | gzip > aais.tar.gz
+
+echo Done.

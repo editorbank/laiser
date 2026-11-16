@@ -7,7 +7,7 @@ if [ "$(docker inspect -f '{{.State.Running}}' aais 2>/dev/null)" = "true" ]; th
     echo "Container aais already running"
 else
     docker rm -f aais >/dev/null 2>&1 || true
-    docker run -d -p 8080:8080 --name aais aais:1.0
+    docker run -d -p 8080:8080 --user 11111 --name aais aais:1.0
 fi
 
 echo Waiting for server ...
