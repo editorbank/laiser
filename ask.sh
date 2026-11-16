@@ -1,8 +1,6 @@
 #!/usr/bin/env bash
-set -uo pipefail
-
+set -e
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-# shellcheck source=/dev/null
 source "$SCRIPT_DIR/config.properties"
 
 BASE_URL="${BASE_URL:-http://localhost:${SERVICE_PORT}}"

@@ -1,7 +1,7 @@
-# LAISER — Local Artificial Intelligence SERvice
+# LAISER
 
-laiser — это самодостаточный Docker-образ с локальным LLM-сервером на базе [llama.cpp](https://github.com/ggml-org/llama.cpp) и моделью **Qwen2.5-3B-Instruct (Q4_K_M)**.
-
+LAISER (Local Artificial Intelligence SERvice) — локальный ИИ‑сервис для интеграции в пайплайны данных и аналитические процессы.
+Это самодостаточный Docker-образ с локальным LLM-сервером на базе [llama.cpp](https://github.com/ggml-org/llama.cpp) и моделью **Qwen2.5-3B-Instruct (Q4_K_M)**.
 Образ поднимает OpenAI-совместимый API-сервер (`llama-server`). Модель и сервер уже включены в образ — в среде выполнения интернет не нужен.
 
 ## Что внутри
@@ -18,12 +18,15 @@ laiser — это самодостаточный Docker-образ с локал
 - Docker
 - `curl` и `jq` — для скриптов `load.sh`, `ask.sh`, `test.sh`
 - Доступ в интернет — **только на этапе сборки** (скачивание исходников llama.cpp и модели)
+- Учётные данные Docker-реестра — только для `push.sh` / `pull.sh`
 
 ## Конфигурация
 
 Параметры задаются в `config.properties` и используются всеми скриптами:
 
-- `SERVICE_NAME`, `SERVICE_VERSION`, `SERVICE_PORT` — имя/версия образа и порт
+- `SERVICE_OWNER`, `SERVICE_NAME`, `SERVICE_VERSION`, `SERVICE_PORT` — владелец/имя/версия образа (`<SERVICE_OWNER>/<SERVICE_NAME>:<SERVICE_VERSION>`) и порт
+- `DOCKER_SERVER` — реестр для `docker login` при публикации (`push.sh`)
+- `FROM_IMAGE` — базовый образ
 - `LLAMA_CPP_VERSION`, `MODEL_REPO`, `MODEL_FILE`, `MODEL_SHA256` — параметры сборки
 - `MODEL_ALIAS`, `MAX_TOKENS` — модель и лимит токенов для запросов
 - `RUN_USER_ID` — UID пользователя при запуске контейнера
@@ -40,9 +43,16 @@ laiser — это самодостаточный Docker-образ с локал
 ```
 
 - `build.sh` — собирает образ, запускает контейнер, ждёт готовности и запускает `test.sh`.
-- `save.sh` — сохраняет образ в архив `<SERVICE_NAME>.tar.gz` (по умолчанию `lais.tar.gz`).
+- `save.sh` — сохраняет образ в архив `<SERVICE_NAME>.tar.gz` (по умолчанию `laiser.tar.gz`).
 
 Перенесите на целевой хост архив и скрипты: `config.properties`, `load.sh`, `ask.sh`, при необходимости `test.sh`.
+
+Альтернативно образ можно опубликовать в реестр и забрать на целевом хосте:
+
+```bash
+./push.sh     # docker login $DOCKER_SERVER и docker push
+./pull.sh     # docker pull на целевой машине
+```
 
 ### 2. Развёртывание (на изолированном хосте)
 
@@ -54,6 +64,8 @@ laiser — это самодостаточный Docker-образ с локал
 - `load.sh` — загружает архив (если образ ещё не загружен), запускает контейнер и выводит список моделей.
 - `ask.sh` — отправляет запрос в `/v1/chat/completions` и печатает ответ.
 
+Если образ получен через `pull.sh`, вместо `load.sh` достаточно запустить контейнер вручную или повторно выполнить `load.sh` — он определит, что образ уже загружен.
+
 ## Скрипты
 
 | Скрипт | Назначение |
@@ -61,6 +73,8 @@ laiser — это самодостаточный Docker-образ с локал
 | `build.sh` | Сборка образа, запуск контейнера, ожидание готовности, тесты |
 | `save.sh` | Сохранение образа в `<SERVICE_NAME>.tar.gz` |
 | `load.sh` | Загрузка архива, запуск контейнера, вывод списка моделей |
+| `pull.sh` | Загрузка образа из реестра (`docker pull`) |
+| `push.sh` | Публикация образа в реестр (`docker login` + `docker push`) |
 | `ask.sh` | Отправка запроса к чат-API (`ask.sh "ваш вопрос"`) |
 | `test.sh` | Проверки `/health`, `/v1/models` и chat completion |
 | `clean.sh` | Удаление контейнера, образа и архива |

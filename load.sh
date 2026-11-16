@@ -1,12 +1,9 @@
 #!/usr/bin/env bash
-#load.sh
 set -e
-
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-# shellcheck source=/dev/null
 source "$SCRIPT_DIR/config.properties"
 
-IMAGE="${SERVICE_NAME}:${SERVICE_VERSION}"
+IMAGE="${SERVICE_OWNER}/${SERVICE_NAME}:${SERVICE_VERSION}"
 CONTAINER="${SERVICE_NAME}"
 ARCHIVE="$SCRIPT_DIR/${SERVICE_NAME}.tar.gz"
 BASE_URL="${BASE_URL:-http://localhost:${SERVICE_PORT}}"
