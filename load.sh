@@ -1,20 +1,20 @@
 #load.sh
 set -e
 
-if docker image inspect aais:1.0 >/dev/null 2>&1; then
-    echo "Image aais:1.0 already loaded"
-elif [ -f aais.tar.gz ]; then
-    docker load < aais.tar.gz
+if docker image inspect lais:1.0 >/dev/null 2>&1; then
+    echo "Image lais:1.0 already loaded"
+elif [ -f lais.tar.gz ]; then
+    docker load < lais.tar.gz
 else
-    echo "aais.tar.gz not found and image aais:1.0 is not loaded"
+    echo "lais.tar.gz not found and image lais:1.0 is not loaded"
     exit 1
 fi
 
-if [ "$(docker inspect -f '{{.State.Running}}' aais 2>/dev/null)" = "true" ]; then
-    echo "Container aais already running"
+if [ "$(docker inspect -f '{{.State.Running}}' lais 2>/dev/null)" = "true" ]; then
+    echo "Container lais already running"
 else
-    docker rm -f aais >/dev/null 2>&1 || true
-    docker run -d -p 8080:8080 --user 11111 --name aais aais:1.0
+    docker rm -f lais >/dev/null 2>&1 || true
+    docker run -d -p 8080:8080 --user 11111 --name lais lais:1.0
 fi
 
 echo Waiting for server ...

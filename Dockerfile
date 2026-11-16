@@ -51,7 +51,7 @@ RUN mkdir -p /models \
 
 FROM ubuntu:24.04
 
-LABEL org.opencontainers.image.title="aais-server" \
+LABEL org.opencontainers.image.title="lais-server" \
       org.opencontainers.image.description="Self-contained llama.cpp OpenAI-compatible server with Qwen2.5-3B-Instruct Q4_K_M" \
       org.opencontainers.image.version="1.0.0" \
       org.opencontainers.image.licenses="MIT"

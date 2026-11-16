@@ -1,4 +1,4 @@
-# AAIS - Autonomous Artificial Intelligence Service
+# LAIS - Local Artificial Intelligence Service
 
 
 Создание Docker образа: ubuntu:24.04 + llama.cpp v1.0.0 + Qwen2.5-3B-Instruct Q4_K_M, статическая сборка, CPU, non-root, healthcheck.
@@ -7,7 +7,7 @@
 ## 1.Сборка
 
 На машине с доступом к сети интернет выполнить `./build.sh && ./save.sh`
-Полученный файл образа `aais.tar.gz` перенести в рантайм среду без доступа к интернету.
+Полученный файл образа `lais.tar.gz` перенести в рантайм среду без доступа к интернету.
 
 ## 2.Развёртывание
 В целевой среде на изолированном от сети хосте выполнить загрузку образа в docker и протестировать работоспособность
