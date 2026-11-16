@@ -1,0 +1,6 @@
+*.tmp
+*.bak
+*.log
+*.tgz
+*.tar.gz
+*.zip
