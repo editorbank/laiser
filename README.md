@@ -1,7 +1,8 @@
 # AAIS - Autonomous Artificial Intelligence Service
 
 
-Dockerfile: ubuntu:24.04 + llama.cpp v1.0.0 + Qwen2.5-3B-Instruct Q4_K_M, статическая сборка, CPU, non-root, healthcheck.
+Создание Docker образа: ubuntu:24.04 + llama.cpp v1.0.0 + Qwen2.5-3B-Instruct Q4_K_M, статическая сборка, CPU, non-root, healthcheck.
+Интернет нужен только на этапе сборки (код llama.cpp и модель скачиваются и проверяются по SHA-256); в рантайме сеть не требуется.
 
 ## 1.Сборка
 
@@ -13,4 +14,3 @@ Dockerfile: ubuntu:24.04 + llama.cpp v1.0.0 + Qwen2.5-3B-Instruct Q4_K_M, ста
 ```bash
 ./load.sh && ./ask.sh "Число Пи c точностью 6 знаков после десятичной точки"
 ```
-Интернет нужен только на этапе сборки (код llama.cpp и модель скачиваются и проверяются по SHA-256); в рантайме сеть не требуется.
