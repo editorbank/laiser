@@ -1,6 +1,14 @@
+#!/usr/bin/env bash
 set -e
 
-echo Save image ...
-[ -f lais.tar.gz ] || docker save lais:1.0 | gzip > lais.tar.gz
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# shellcheck source=/dev/null
+source "$SCRIPT_DIR/config.properties"
 
-echo Done.
+IMAGE="${SERVICE_NAME}:${SERVICE_VERSION}"
+ARCHIVE="${SERVICE_NAME}.tar.gz"
+
+echo "Save image ..."
+[ -f "$SCRIPT_DIR/$ARCHIVE" ] || docker save "$IMAGE" | gzip > "$SCRIPT_DIR/$ARCHIVE"
+
+echo "Done."

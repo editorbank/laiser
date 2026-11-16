@@ -1,15 +1,15 @@
-# LAIS — Local Artificial Intelligence Service
+# LAISER — Local Artificial Intelligence SERvice
 
-LAIS — это самодостаточный Docker-образ с локальным LLM-сервером на базе [llama.cpp](https://github.com/ggml-org/llama.cpp) и моделью **Qwen2.5-3B-Instruct (Q4_K_M)**.
+laiser — это самодостаточный Docker-образ с локальным LLM-сервером на базе [llama.cpp](https://github.com/ggml-org/llama.cpp) и моделью **Qwen2.5-3B-Instruct (Q4_K_M)**.
 
-Образ поднимает OpenAI-совместимый API-сервер (`llama-server`) на порту `8080`. Модель и сервер уже включены в образ — в среде выполнения интернет не нужен.
+Образ поднимает OpenAI-совместимый API-сервер (`llama-server`). Модель и сервер уже включены в образ — в среде выполнения интернет не нужен.
 
 ## Что внутри
 
-- **Базовый образ:** `ubuntu:24.04`
-- **Сервер:** `llama.cpp` v1.0.0 (статическая сборка, CPU, OpenMP)
-- **Модель:** `qwen2.5-3b-instruct-q4_k_m.gguf` (проверяется по SHA-256 при сборке)
-- **API:** `http://localhost:8080/v1/...` (совместим с OpenAI Chat Completions)
+- **Базовый образ:** `ubuntu:24.04` (настраивается в `config.properties`)
+- **Сервер:** `llama.cpp` (статическая сборка, CPU, OpenMP)
+- **Модель:** GGUF-модель из `config.properties` (проверяется по SHA-256 при сборке)
+- **API:** OpenAI-совместимый endpoint `/v1/chat/completions`
 - **Healthcheck:** `GET /health`
 - **Пользователь в контейнере:** non-root
 
@@ -19,7 +19,18 @@ LAIS — это самодостаточный Docker-образ с локаль
 - `curl` и `jq` — для скриптов `load.sh`, `ask.sh`, `test.sh`
 - Доступ в интернет — **только на этапе сборки** (скачивание исходников llama.cpp и модели)
 
-## Быстрый старт (сборка → перенос → запуск)
+## Конфигурация
+
+Параметры задаются в `config.properties` и используются всеми скриптами:
+
+- `SERVICE_NAME`, `SERVICE_VERSION`, `SERVICE_PORT` — имя/версия образа и порт
+- `LLAMA_CPP_VERSION`, `MODEL_REPO`, `MODEL_FILE`, `MODEL_SHA256` — параметры сборки
+- `MODEL_ALIAS`, `MAX_TOKENS` — модель и лимит токенов для запросов
+- `TEST_USERID` — UID пользователя при запуске контейнера
+
+Переменные окружения `BASE_URL`, `MODEL`, `MAX_TOKENS` (где применимо) имеют приоритет над значениями из `config.properties`.
+
+## Быстрый старт
 
 ### 1. Сборка и упаковка (на машине с интернетом)
 
@@ -28,10 +39,10 @@ LAIS — это самодостаточный Docker-образ с локаль
 ./save.sh
 ```
 
-- `build.sh` — собирает образ `lais:1.0`, запускает контейнер `lais`, ждёт готовности и прогоняет `test.sh`.
-- `save.sh` — сохраняет образ в файл `lais.tar.gz` для переноса.
+- `build.sh` — собирает образ, запускает контейнер, ждёт готовности и запускает `test.sh`.
+- `save.sh` — сохраняет образ в архив `<SERVICE_NAME>.tar.gz` (по умолчанию `lais.tar.gz`).
 
-Перенесите `lais.tar.gz` и скрипты (`load.sh`, `ask.sh`, при необходимости `test.sh`) на целевой хост.
+Перенесите на целевой хост архив и скрипты: `config.properties`, `load.sh`, `ask.sh`, при необходимости `test.sh`.
 
 ### 2. Развёртывание (на изолированном хосте)
 
@@ -40,7 +51,7 @@ LAIS — это самодостаточный Docker-образ с локаль
 ./ask.sh "Число Пи c точностью 6 знаков после десятичной точки"
 ```
 
-- `load.sh` — загружает `lais.tar.gz` (если образ ещё не загружен), запускает контейнер `lais` и выводит список моделей.
+- `load.sh` — загружает архив (если образ ещё не загружен), запускает контейнер и выводит список моделей.
 - `ask.sh` — отправляет запрос в `/v1/chat/completions` и печатает ответ.
 
 ## Скрипты
@@ -48,28 +59,28 @@ LAIS — это самодостаточный Docker-образ с локаль
 | Скрипт | Назначение |
 |---|---|
 | `build.sh` | Сборка образа, запуск контейнера, ожидание готовности, тесты |
-| `save.sh` | Сохранение образа `lais:1.0` в `lais.tar.gz` |
-| `load.sh` | Загрузка образа из `lais.tar.gz`, запуск контейнера, вывод списка моделей |
+| `save.sh` | Сохранение образа в `<SERVICE_NAME>.tar.gz` |
+| `load.sh` | Загрузка архива, запуск контейнера, вывод списка моделей |
 | `ask.sh` | Отправка запроса к чат-API (`ask.sh "ваш вопрос"`) |
 | `test.sh` | Проверки `/health`, `/v1/models` и chat completion |
-| `clean.sh` | Удаление контейнера `lais`, образа `lais:1.0` и  файла `lais.tar.gz` |
+| `clean.sh` | Удаление контейнера, образа и архива |
 
 ## Использование API
 
-Пример запроса к OpenAI-совместимому endpoint:
+Пример запроса:
 
 ```bash
-curl -s http://localhost:8080/v1/chat/completions \
+curl -s "http://localhost:${SERVICE_PORT}/v1/chat/completions" \
   -H 'Content-Type: application/json' \
   -d '{
-    "model": "qwen2.5-3b-instruct",
+    "model": "'"${MODEL_ALIAS}"'",
     "messages": [{"role": "user", "content": "Привет!"}],
     "max_tokens": 512,
     "temperature": 0
   }' | jq -r '.choices[0].message.content'
 ```
 
-Переменные окружения для `ask.sh`: `BASE_URL` (по умолчанию `http://localhost:8080`), `MODEL` (`qwen2.5-3b-instruct`), `MAX_TOKENS` (`512`).
+(подставьте значения из `config.properties` или используйте `ask.sh`)
 
 ## Тестирование
 
@@ -77,4 +88,4 @@ curl -s http://localhost:8080/v1/chat/completions \
 ./test.sh [-u BASE_URL] [-m MODEL] [-c CONTAINER] [-w WAIT_SECONDS]
 ```
 
-Проверяет доступность `/health`, наличие модели в `/v1/models` и корректность ответа `/v1/chat/completions`. При запуске с `-c <container>` проверки выполняются внутри контейнера (полезно для режима `--network none`).
+Проверяет `/health`, наличие модели в `/v1/models` и ответ `/v1/chat/completions`. С `-c <container>` проверки выполняются внутри контейнера.

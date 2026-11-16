@@ -1,8 +1,12 @@
 #!/usr/bin/env bash
 set -uo pipefail
 
-BASE_URL="${BASE_URL:-http://127.0.0.1:8080}"
-MODEL="${MODEL:-qwen2.5-3b-instruct}"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# shellcheck source=/dev/null
+source "$SCRIPT_DIR/config.properties"
+
+BASE_URL="${BASE_URL:-http://127.0.0.1:${SERVICE_PORT}}"
+MODEL="${MODEL:-${MODEL_ALIAS}}"
 CONTAINER="${CONTAINER:-}"
 WAIT_SECONDS="${WAIT_SECONDS:-0}"
 MAX_TIME="${MAX_TIME:-180}"

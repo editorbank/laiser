@@ -1,27 +1,40 @@
+#!/usr/bin/env bash
 #build.sh
 set -e
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# shellcheck source=/dev/null
+source "$SCRIPT_DIR/config.properties"
 
-if docker image inspect lais:1.0 >/dev/null 2>&1; then
-    echo "Image lais:1.0 already exists."
+IMAGE="${SERVICE_NAME}:${SERVICE_VERSION}"
+CONTAINER="${SERVICE_NAME}"
+BASE_URL="${BASE_URL:-http://localhost:${SERVICE_PORT}}"
+MODEL="${MODEL:-${MODEL_ALIAS}}"
+
+if docker image inspect "$IMAGE" >/dev/null 2>&1; then
+    echo "Image $IMAGE already exists."
 else
-    echo Build image lais:1.0 ...
-    docker build -t lais:1.0 .
+    echo "Build image $IMAGE ..."
+    docker build -t "$IMAGE" \
+        --build-arg "LLAMA_CPP_VERSION=${LLAMA_CPP_VERSION}" \
+        --build-arg "MODEL_REPO=${MODEL_REPO}" \
+        --build-arg "MODEL_FILE=${MODEL_FILE}" \
+        --build-arg "MODEL_SHA256=${MODEL_SHA256}" \
+        "$SCRIPT_DIR"
 fi
 
-
-if [ "$(docker inspect -f '{{.State.Running}}' lais 2>/dev/null)" = "true" ]; then
-    echo "Container lais already running"
+if [ "$(docker inspect -f '{{.State.Running}}' "$CONTAINER" 2>/dev/null)" = "true" ]; then
+    echo "Container $CONTAINER already running"
 else
-    echo Run container lais ...
-    docker rm -f lais >/dev/null 2>&1 || true
-    docker run -d -p 8080:8080 --user 11111 --name lais lais:1.0
+    echo "Run container $CONTAINER ..."
+    docker rm -f "$CONTAINER" >/dev/null 2>&1 || true
+    docker run -d -p "${SERVICE_PORT}:8080" --user "$TEST_USERID" --name "$CONTAINER" "$IMAGE"
 fi
 
-echo Waiting for server ready ...
+echo "Waiting for server ready ..."
 ready=0
 for i in $(seq 1 30); do
-    if curl -sf http://localhost:8080/health >/dev/null; then
+    if curl -sf "${BASE_URL}/health" >/dev/null; then
         ready=1
         break
     fi
@@ -32,7 +45,7 @@ if [ "$ready" -ne 1 ]; then
     exit 1
 fi
 
-echo Testing ...
-. ./test.sh
+echo "Testing ..."
+BASE_URL="$BASE_URL" MODEL="$MODEL" "$SCRIPT_DIR/test.sh"
 
-echo Done.
+echo "Done."

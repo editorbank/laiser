@@ -1,10 +1,14 @@
 #!/usr/bin/env bash
 set -uo pipefail
 
-BASE_URL="${BASE_URL:-http://localhost:8080}"
-MODEL="${MODEL:-qwen2.5-3b-instruct}"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# shellcheck source=/dev/null
+source "$SCRIPT_DIR/config.properties"
+
+BASE_URL="${BASE_URL:-http://localhost:${SERVICE_PORT}}"
+MODEL="${MODEL:-${MODEL_ALIAS}}"
 PROMPT="${1:-Привет!}"
-MAX_TOKENS="${MAX_TOKENS:-512}"
+MAX_TOKENS="${MAX_TOKENS:-${MAX_TOKENS:-512}}"
 
 echo Asking ...
 payload=$(jq -n \
