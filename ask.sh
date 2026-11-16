@@ -6,6 +6,7 @@ MODEL="${MODEL:-qwen2.5-3b-instruct}"
 PROMPT="${1:-Привет!}"
 MAX_TOKENS="${MAX_TOKENS:-512}"
 
+echo Asking ...
 payload=$(jq -n \
     --arg model "$MODEL" \
     --arg prompt "$PROMPT" \
