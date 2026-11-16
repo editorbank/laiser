@@ -1,14 +1,14 @@
 # AAIS - Autonomous Artificial Intelligence Service
 
 
-Dockerfile: ubuntu + llama.cpp v1.0.0 + Qwen2.5-3B-Instruct Q4_K_M, статическая сборка, CPU, non-root, healthcheck.
+Dockerfile: ubuntu:24.04 + llama.cpp v1.0.0 + Qwen2.5-3B-Instruct Q4_K_M, статическая сборка, CPU, non-root, healthcheck.
 
 ## 1.Сборка
  на машине с интернетом выполнить
 ```bash
 #build.sh
 docker build -t aais:1.0 .
-docker run -d --network none -p 8080:8080 --name llama aais:1.0
+docker run -d -p 8080:8080 --name aais aais:1.0
 curl --compressed http://localhost:8080/v1/models
 docker save aais:1.0 | gzip > aais.tar.gz
 ```
