@@ -30,7 +30,7 @@ if [ "$(docker inspect -f '{{.State.Running}}' "$CONTAINER" 2>/dev/null)" = "tru
 else
     echo "Run container $CONTAINER ..."
     docker rm -f "$CONTAINER" >/dev/null 2>&1 || true
-    docker run -d -p "${SERVICE_PORT}:${SERVICE_PORT}" --user "$TEST_USERID" --name "$CONTAINER" "$IMAGE"
+    docker run -d -p "${SERVICE_PORT}:${SERVICE_PORT}" --user "$RUN_USER_ID" --name "$CONTAINER" "$IMAGE"
 fi
 
 echo "Waiting for server ready ..."

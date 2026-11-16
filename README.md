@@ -26,7 +26,7 @@ laiser — это самодостаточный Docker-образ с локал
 - `SERVICE_NAME`, `SERVICE_VERSION`, `SERVICE_PORT` — имя/версия образа и порт
 - `LLAMA_CPP_VERSION`, `MODEL_REPO`, `MODEL_FILE`, `MODEL_SHA256` — параметры сборки
 - `MODEL_ALIAS`, `MAX_TOKENS` — модель и лимит токенов для запросов
-- `TEST_USERID` — UID пользователя при запуске контейнера
+- `RUN_USER_ID` — UID пользователя при запуске контейнера
 
 Переменные окружения `BASE_URL`, `MODEL`, `MAX_TOKENS` (где применимо) имеют приоритет над значениями из `config.properties`.
 
