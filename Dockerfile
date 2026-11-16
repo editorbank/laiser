@@ -1,6 +1,9 @@
 # syntax=docker/dockerfile:1.7
 
-FROM ubuntu:24.04 AS llama-build
+ARG FROM_IMAGE=ubuntu:24.04
+ARG SERVICE_PORT=8080
+
+FROM ${FROM_IMAGE} AS llama-build
 
 ARG LLAMA_CPP_VERSION=v1.0.0
 
@@ -31,7 +34,7 @@ RUN cmake -S /src -B /src/build \
     && cmake --build /src/build --target llama-server -j"$(nproc)" \
     && test -x /src/build/bin/llama-server
 
-FROM ubuntu:24.04 AS model
+FROM ${FROM_IMAGE} AS model
 
 ARG MODEL_REPO=Qwen/Qwen2.5-3B-Instruct-GGUF
 ARG MODEL_FILE=qwen2.5-3b-instruct-q4_k_m.gguf
@@ -49,7 +52,9 @@ RUN mkdir -p /models \
         "https://huggingface.co/${MODEL_REPO}/resolve/main/${MODEL_FILE}" \
     && echo "${MODEL_SHA256}  /models/model.gguf" | sha256sum -c -
 
-FROM ubuntu:24.04
+FROM ${FROM_IMAGE}
+
+ARG SERVICE_PORT=8080
 
 LABEL org.opencontainers.image.title="lais-server" \
       org.opencontainers.image.description="Self-contained llama.cpp OpenAI-compatible server with Qwen2.5-3B-Instruct Q4_K_M" \
@@ -58,7 +63,8 @@ LABEL org.opencontainers.image.title="lais-server" \
 
 ENV DEBIAN_FRONTEND=noninteractive \
     MODEL_PATH=/models/model.gguf \
-    MODEL_ALIAS=qwen2.5-3b-instruct
+    MODEL_ALIAS=qwen2.5-3b-instruct \
+    SERVICE_PORT=${SERVICE_PORT}
 
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \
@@ -73,18 +79,12 @@ RUN apt-get update \
 COPY --from=llama-build /src/build/bin/llama-server /usr/local/bin/llama-server
 COPY --from=model --chown=root:root /models/model.gguf /models/model.gguf
 
-USER llama
+# USER llama
 
-EXPOSE 8080
+EXPOSE ${SERVICE_PORT}
 
 HEALTHCHECK --interval=30s --timeout=5s --start-period=120s --retries=3 \
-    CMD ["curl", "-fsS", "http://127.0.0.1:8080/health"]
+    CMD curl -fsS "http://127.0.0.1:${SERVICE_PORT}/health"
 
-ENTRYPOINT ["llama-server"]
-CMD ["-m", "/models/model.gguf", \
-     "--alias", "qwen2.5-3b-instruct", \
-     "--host", "0.0.0.0", \
-     "--port", "8080", \
-     "-c", "4096", \
-     "--jinja", \
-     "--metrics"]
+# ENTRYPOINT ["llama-server"]
+CMD ["sh", "-c", "exec llama-server -m \"$MODEL_PATH\" --alias \"$MODEL_ALIAS\" --host 0.0.0.0 --port \"$SERVICE_PORT\" -c 4096 --jinja --metrics"]

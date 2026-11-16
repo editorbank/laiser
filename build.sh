@@ -16,6 +16,8 @@ if docker image inspect "$IMAGE" >/dev/null 2>&1; then
 else
     echo "Build image $IMAGE ..."
     docker build -t "$IMAGE" \
+        --build-arg "FROM_IMAGE=${FROM_IMAGE}" \
+        --build-arg "SERVICE_PORT=${SERVICE_PORT}" \
         --build-arg "LLAMA_CPP_VERSION=${LLAMA_CPP_VERSION}" \
         --build-arg "MODEL_REPO=${MODEL_REPO}" \
         --build-arg "MODEL_FILE=${MODEL_FILE}" \
@@ -28,7 +30,7 @@ if [ "$(docker inspect -f '{{.State.Running}}' "$CONTAINER" 2>/dev/null)" = "tru
 else
     echo "Run container $CONTAINER ..."
     docker rm -f "$CONTAINER" >/dev/null 2>&1 || true
-    docker run -d -p "${SERVICE_PORT}:8080" --user "$TEST_USERID" --name "$CONTAINER" "$IMAGE"
+    docker run -d -p "${SERVICE_PORT}:${SERVICE_PORT}" --user "$TEST_USERID" --name "$CONTAINER" "$IMAGE"
 fi
 
 echo "Waiting for server ready ..."

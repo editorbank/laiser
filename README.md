@@ -67,7 +67,7 @@ laiser — это самодостаточный Docker-образ с локал
 
 ## Использование API
 
-Пример запроса:
+Пример запроса (порт берётся из `config.properties`, по умолчанию `8080`):
 
 ```bash
 curl -s "http://localhost:${SERVICE_PORT}/v1/chat/completions" \
