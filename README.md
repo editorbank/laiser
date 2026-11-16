@@ -3,6 +3,7 @@
 LAISER (Local Artificial Intelligence SERvice) — локальный ИИ‑сервис для интеграции в пайплайны данных и аналитические процессы.
 Это самодостаточный Docker-образ с локальным LLM-сервером на базе [llama.cpp](https://github.com/ggml-org/llama.cpp) и моделью **Qwen2.5-3B-Instruct (Q4_K_M)**.
 Образ поднимает OpenAI-совместимый API-сервер (`llama-server`). Модель и сервер уже включены в образ — в среде выполнения интернет не нужен.
+Готовый образ можно скачать c Docker Hub [editorbank/laiser](https://hub.docker.com/r/editorbank/laiser)
 
 ## Что внутри
 
