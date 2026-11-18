@@ -1,8 +1,8 @@
 # syntax=docker/dockerfile:1.7
 
 ARG FROM_IMAGE=ubuntu:24.04
-ARG SERVICE_PORT=8080
 
+########################
 FROM ${FROM_IMAGE} AS llama-build
 
 ARG LLAMA_CPP_VERSION=v1.0.0
@@ -31,14 +31,20 @@ RUN cmake -S /src -B /src/build \
         -DLLAMA_BUILD_APP=OFF \
         -DLLAMA_BUILD_SERVER=ON \
         -DLLAMA_TOOLS_INSTALL=ON \
+        -DLLAMA_BUILD_UI=OFF \
+        -DLLAMA_USE_PREBUILT_UI=OFF \
     && cmake --build /src/build --target llama-server -j"$(nproc)" \
     && test -x /src/build/bin/llama-server
 
+########################
 FROM ${FROM_IMAGE} AS model
 
-ARG MODEL_REPO=Qwen/Qwen2.5-3B-Instruct-GGUF
-ARG MODEL_FILE=qwen2.5-3b-instruct-q4_k_m.gguf
-ARG MODEL_SHA256=626b4a6678b86442240e33df819e00132d3ba7dddfe1cdc4fbb18e0a9615c62d
+ARG SERVICE_NAME=laiser
+ARG SERVICE_VERSION=0.0.0
+ARG MODEL_REPO=Qwen/model
+ARG MODEL_FILE=model.gguf
+ARG MODEL_SHA256=0000000000000000000000000000000000000000000000000000000000000000
+ARG MODEL_ALIAS=default
 
 ENV DEBIAN_FRONTEND=noninteractive
 
@@ -48,23 +54,31 @@ RUN apt-get update \
 
 RUN mkdir -p /models \
     && curl -fL --retry 5 --retry-delay 5 \
-        -o /models/model.gguf \
+        -o /models/${MODEL_FILE} \
         "https://huggingface.co/${MODEL_REPO}/resolve/main/${MODEL_FILE}" \
-    && echo "${MODEL_SHA256}  /models/model.gguf" | sha256sum -c -
+    && echo "${MODEL_SHA256}  /models/${MODEL_FILE}" | sha256sum -c -
 
+########################
 FROM ${FROM_IMAGE}
 
+ARG SERVICE_NAME=laiser
+ARG SERVICE_VERSION=0.0.0
 ARG SERVICE_PORT=8080
+ARG MODEL_FILE=model.gguf
+ARG MODEL_ALIAS=default
+ARG MAX_TOKENS=4096
 
-LABEL org.opencontainers.image.title="lais-server" \
-      org.opencontainers.image.description="Self-contained llama.cpp OpenAI-compatible server with Qwen2.5-3B-Instruct Q4_K_M" \
-      org.opencontainers.image.version="1.0.0" \
-      org.opencontainers.image.licenses="MIT"
+
+LABEL org.opencontainers.image.title="${SERVICE_NAME}" \
+      org.opencontainers.image.description="Self-contained llama.cpp OpenAI-compatible server" \
+      org.opencontainers.image.version="${SERVICE_VERSION}" \
+      org.opencontainers.image.licenses="MIT + Apache 2.0"
 
 ENV DEBIAN_FRONTEND=noninteractive \
-    MODEL_PATH=/models/model.gguf \
-    MODEL_ALIAS=qwen2.5-3b-instruct \
-    SERVICE_PORT=${SERVICE_PORT}
+    MODEL_PATH=/models/${MODEL_FILE} \
+    MODEL_ALIAS=${MODEL_ALIAS} \
+    SERVICE_PORT=${SERVICE_PORT} \
+    MAX_TOKENS=${MAX_TOKENS}
 
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \
@@ -77,9 +91,9 @@ RUN apt-get update \
     && mkdir -p /models
 
 COPY --from=llama-build /src/build/bin/llama-server /usr/local/bin/llama-server
-COPY --from=model --chown=root:root /models/model.gguf /models/model.gguf
+COPY --from=model --chown=root:root /models/${MODEL_FILE} /models/${MODEL_FILE}
 
-# USER llama
+USER ${SERVICE_NAME}
 
 EXPOSE ${SERVICE_PORT}
 
@@ -87,4 +101,4 @@ HEALTHCHECK --interval=30s --timeout=5s --start-period=120s --retries=3 \
     CMD curl -fsS "http://127.0.0.1:${SERVICE_PORT}/health"
 
 # ENTRYPOINT ["llama-server"]
-CMD ["sh", "-c", "exec llama-server -m \"$MODEL_PATH\" --alias \"$MODEL_ALIAS\" --host 0.0.0.0 --port \"$SERVICE_PORT\" -c 4096 --jinja --metrics"]
+CMD ["sh", "-c", "exec llama-server -m \"$MODEL_PATH\" --alias \"$MODEL_ALIAS\" --host 0.0.0.0 --port \"$SERVICE_PORT\" -c \"$MAX_TOKENS\" --jinja --metrics"]

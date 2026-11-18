@@ -4,3 +4,5 @@
 *.tgz
 *.tar.gz
 *.zip
+.*
+!.git*

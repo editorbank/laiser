@@ -1,18 +1,21 @@
 # LAISER
 
 LAISER (Local Artificial Intelligence SERvice) — локальный ИИ‑сервис для интеграции в пайплайны данных и аналитические процессы.
-Это самодостаточный Docker-образ с локальным LLM-сервером на базе [llama.cpp](https://github.com/ggml-org/llama.cpp) и моделью **Qwen2.5-3B-Instruct (Q4_K_M)**.
-Образ поднимает OpenAI-совместимый API-сервер (`llama-server`). Модель и сервер уже включены в образ — в среде выполнения интернет не нужен.
-Готовый образ можно скачать c Docker Hub [editorbank/laiser](https://hub.docker.com/r/editorbank/laiser)
+Это самодостаточный Docker-образ с локальным LLM-сервером на базе [llama.cpp](https://github.com/ggml-org/llama.cpp) и моделью **Qwen3-4B-Instruct-2507 (Q4_K_M)**.
+Образ поднимает OpenAI‑совместимый API-сервер (`llama-server`): модель и сервер уже включены в образ, поэтому в среде выполнения интернет не нужен.
+Готовый образ можно скачать с Docker Hub: [editorbank/laiser](https://hub.docker.com/r/editorbank/laiser).
+История изменений приведена в [CHANGELOG.md](CHANGELOG.md).
 
 ## Что внутри
 
 - **Базовый образ:** `ubuntu:24.04` (настраивается в `config.properties`)
-- **Сервер:** `llama.cpp` (статическая сборка, CPU, OpenMP)
-- **Модель:** GGUF-модель из `config.properties` (проверяется по SHA-256 при сборке)
-- **API:** OpenAI-совместимый endpoint `/v1/chat/completions`
-- **Healthcheck:** `GET /health`
-- **Пользователь в контейнере:** non-root
+- **Сервер:** `llama.cpp` `v1.0.0` (статическая сборка, CPU, OpenMP), запуск с `--jinja --metrics`
+- **Модель:** `Qwen/Qwen3-4B-Instruct-2507` (GGUF-квантование `Q4_K_M` из `unsloth/Qwen3-4B-Instruct-2507-GGUF`), файл `Qwen3-4B-Instruct-2507-Q4_K_M.gguf` (~2,5 ГБ); SHA-256 проверяется при сборке
+- **Алиас модели в API:** `default` (задаётся в `config.properties`)
+- **Версия образа:** `1.1` (тег `editorbank/laiser:1.1`)
+- **Контекст:** 4096 токенов (`-c 4096` в `CMD`)
+- **API:** `GET /health`, `GET /v1/models`, `POST /v1/chat/completions`
+- **Права:** контейнер запускается от непривилегированного UID (`RUN_USER_ID`, по умолчанию `11111`)
 
 ## Требования
 
@@ -26,13 +29,17 @@ LAISER (Local Artificial Intelligence SERvice) — локальный ИИ‑с�
 Параметры задаются в `config.properties` и используются всеми скриптами:
 
 - `SERVICE_OWNER`, `SERVICE_NAME`, `SERVICE_VERSION`, `SERVICE_PORT` — владелец/имя/версия образа (`<SERVICE_OWNER>/<SERVICE_NAME>:<SERVICE_VERSION>`) и порт
-- `DOCKER_SERVER` — реестр для `docker login` при публикации (`push.sh`)
+- `IMAGE_HUB` — реестр для `docker login` при публикации (`push.sh`)
 - `FROM_IMAGE` — базовый образ
 - `LLAMA_CPP_VERSION`, `MODEL_REPO`, `MODEL_FILE`, `MODEL_SHA256` — параметры сборки
-- `MODEL_ALIAS`, `MAX_TOKENS` — модель и лимит токенов для запросов
-- `RUN_USER_ID` — UID пользователя при запуске контейнера
+- `MODEL_ALIAS`, `MAX_TOKENS` — алиас модели в API и лимит токенов для `ask.sh`
+- `RUN_USER_ID` — UID пользователя, от которого запускается контейнер
 
-Переменные окружения `BASE_URL`, `MODEL`, `MAX_TOKENS` (где применимо) имеют приоритет над значениями из `config.properties`.
+`SERVICE_NAME`, `SERVICE_VERSION` и `MODEL_ALIAS` передаются в сборку как build-аргументы (`build.sh`), поэтому имя, версия и алиас модели настраиваются без правки `Dockerfile`.
+
+Переменные окружения `BASE_URL` и `MODEL` имеют приоритет над значениями из `config.properties`. Для `test.sh` также доступны `CONTAINER`, `WAIT_SECONDS` и `MAX_TIME`.
+
+> `build.sh` не пересобирает образ, если он уже существует с текущим тегом, а `save.sh` не перезаписывает существующий архив. После изменения `MODEL_*`, `LLAMA_CPP_VERSION` или других параметров сборки удалите старые артефакты (`./clean.sh`) и выполните сборку заново.
 
 ## Быстрый старт
 
@@ -51,7 +58,7 @@ LAISER (Local Artificial Intelligence SERvice) — локальный ИИ‑с�
 Альтернативно образ можно опубликовать в реестр и забрать на целевом хосте:
 
 ```bash
-./push.sh     # docker login $DOCKER_SERVER и docker push
+./push.sh     # docker login $IMAGE_HUB и docker push
 ./pull.sh     # docker pull на целевой машине
 ```
 
@@ -66,6 +73,12 @@ LAISER (Local Artificial Intelligence SERvice) — локальный ИИ‑с�
 - `ask.sh` — отправляет запрос в `/v1/chat/completions` и печатает ответ.
 
 Если образ получен через `pull.sh`, вместо `load.sh` достаточно запустить контейнер вручную или повторно выполнить `load.sh` — он определит, что образ уже загружен.
+
+Для полностью изолированного запуска контейнер можно поднять с `--network none`; в этом случае проверки выполняются внутри контейнера:
+
+```bash
+./test.sh -c laiser -w 30
+```
 
 ## Скрипты
 
@@ -82,7 +95,7 @@ LAISER (Local Artificial Intelligence SERvice) — локальный ИИ‑с�
 
 ## Использование API
 
-Пример запроса (порт берётся из `config.properties`, по умолчанию `8080`):
+Пример запроса (порт и алиас берутся из `config.properties`, по умолчанию `8080` и `default`):
 
 ```bash
 curl -s "http://localhost:${SERVICE_PORT}/v1/chat/completions" \
@@ -90,7 +103,7 @@ curl -s "http://localhost:${SERVICE_PORT}/v1/chat/completions" \
   -d '{
     "model": "'"${MODEL_ALIAS}"'",
     "messages": [{"role": "user", "content": "Привет!"}],
-    "max_tokens": 512,
+    "max_tokens": 4096,
     "temperature": 0
   }' | jq -r '.choices[0].message.content'
 ```
@@ -103,4 +116,4 @@ curl -s "http://localhost:${SERVICE_PORT}/v1/chat/completions" \
 ./test.sh [-u BASE_URL] [-m MODEL] [-c CONTAINER] [-w WAIT_SECONDS]
 ```
 
-Проверяет `/health`, наличие модели в `/v1/models` и ответ `/v1/chat/completions`. С `-c <container>` проверки выполняются внутри контейнера.
+Проверяет `/health`, наличие модели в `/v1/models` и ответ `/v1/chat/completions`. С `-c <container>` проверки выполняются внутри контейнера (необходимо при `--network none`).

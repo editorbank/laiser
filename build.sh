@@ -3,7 +3,7 @@ set -e
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "$SCRIPT_DIR/config.properties"
 
-IMAGE="${SERVICE_OWNER}/${SERVICE_NAME}:${SERVICE_VERSION}"
+IMAGE="${IMAGE_HUB}/${SERVICE_OWNER}/${SERVICE_NAME}:${SERVICE_VERSION}"
 CONTAINER="${SERVICE_NAME}"
 BASE_URL="${BASE_URL:-http://localhost:${SERVICE_PORT}}"
 MODEL="${MODEL:-${MODEL_ALIAS}}"
@@ -14,11 +14,15 @@ else
     echo "Build image $IMAGE ..."
     docker build -t "$IMAGE" \
         --build-arg "FROM_IMAGE=${FROM_IMAGE}" \
+        --build-arg "SERVICE_NAME=${SERVICE_NAME}" \
+        --build-arg "SERVICE_VERSION=${SERVICE_VERSION}" \
         --build-arg "SERVICE_PORT=${SERVICE_PORT}" \
         --build-arg "LLAMA_CPP_VERSION=${LLAMA_CPP_VERSION}" \
         --build-arg "MODEL_REPO=${MODEL_REPO}" \
         --build-arg "MODEL_FILE=${MODEL_FILE}" \
         --build-arg "MODEL_SHA256=${MODEL_SHA256}" \
+        --build-arg "MODEL_ALIAS=${MODEL_ALIAS}" \
+        --build-arg "MAX_TOKENS=${MAX_TOKENS}" \
         "$SCRIPT_DIR"
 fi
 
