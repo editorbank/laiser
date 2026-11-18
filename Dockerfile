@@ -61,24 +61,27 @@ RUN mkdir -p /models \
 ########################
 FROM ${FROM_IMAGE}
 
-ARG SERVICE_NAME=laiser
-ARG SERVICE_VERSION=0.0.0
-ARG SERVICE_PORT=8080
-ARG MODEL_FILE=model.gguf
-ARG MODEL_ALIAS=default
-ARG MAX_TOKENS=4096
-
-
-LABEL org.opencontainers.image.title="${SERVICE_NAME}" \
-      org.opencontainers.image.description="Self-contained llama.cpp OpenAI-compatible server" \
-      org.opencontainers.image.version="${SERVICE_VERSION}" \
-      org.opencontainers.image.licenses="MIT + Apache 2.0"
+ARG SERVICE_NAME=laiser \
+    SERVICE_VERSION=0.0.0 \
+    SERVICE_PORT=8080 \
+    SERVICE_USER_ID=10001 \
+    MODEL_FILE=model.gguf \
+    MODEL_ALIAS=default \
+    MAX_TOKENS=32768
 
 ENV DEBIAN_FRONTEND=noninteractive \
-    MODEL_PATH=/models/${MODEL_FILE} \
-    MODEL_ALIAS=${MODEL_ALIAS} \
-    SERVICE_PORT=${SERVICE_PORT} \
-    MAX_TOKENS=${MAX_TOKENS}
+    LLAMA_ARG_ALIAS=${MODEL_ALIAS} \
+    LLAMA_ARG_MODEL=/models/${MODEL_FILE} \
+    LLAMA_ARG_THREADS=4 \
+    LLAMA_ARG_N_GPU_LAYERS=0 \
+    LLAMA_ARG_CTX_SIZE=${MAX_TOKENS} \
+    LLAMA_ARG_FLASH_ATTN=1 \
+    LLAMA_ARG_CACHE_TYPE_K=q8_0 \
+    LLAMA_ARG_CACHE_TYPE_V=q8_0 \
+    LLAMA_ARG_JINJA=1 \
+    LLAMA_ARG_METRICS=1 \
+    LLAMA_ARG_HOST=0.0.0.0 \
+    LLAMA_ARG_PORT=${SERVICE_PORT}
 
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \
@@ -87,7 +90,7 @@ RUN apt-get update \
         libgomp1 \
         libstdc++6 \
     && rm -rf /var/lib/apt/lists/* \
-    && useradd --system --uid 10001 --create-home --home-dir /home/llama llama \
+    && useradd --system --uid ${SERVICE_USER_ID} --create-home --home-dir /home/${SERVICE_NAME} ${SERVICE_NAME} \
     && mkdir -p /models
 
 COPY --from=llama-build /src/build/bin/llama-server /usr/local/bin/llama-server
@@ -95,10 +98,10 @@ COPY --from=model --chown=root:root /models/${MODEL_FILE} /models/${MODEL_FILE}
 
 USER ${SERVICE_NAME}
 
-EXPOSE ${SERVICE_PORT}
+EXPOSE ${LLAMA_ARG_PORT}
 
 HEALTHCHECK --interval=30s --timeout=5s --start-period=120s --retries=3 \
-    CMD curl -fsS "http://127.0.0.1:${SERVICE_PORT}/health"
+    CMD curl -fsS "http://127.0.0.1:${LLAMA_ARG_PORT}/health"
 
-# ENTRYPOINT ["llama-server"]
-CMD ["sh", "-c", "exec llama-server -m \"$MODEL_PATH\" --alias \"$MODEL_ALIAS\" --host 0.0.0.0 --port \"$SERVICE_PORT\" -c \"$MAX_TOKENS\" --jinja --metrics"]
+ENTRYPOINT ["llama-server"]
+# CMD ["sh", "-c", "exec llama-server"]

@@ -17,6 +17,7 @@ else
         --build-arg "SERVICE_NAME=${SERVICE_NAME}" \
         --build-arg "SERVICE_VERSION=${SERVICE_VERSION}" \
         --build-arg "SERVICE_PORT=${SERVICE_PORT}" \
+        --build-arg "SERVICE_USER_ID=${SERVICE_USER_ID}" \
         --build-arg "LLAMA_CPP_VERSION=${LLAMA_CPP_VERSION}" \
         --build-arg "MODEL_REPO=${MODEL_REPO}" \
         --build-arg "MODEL_FILE=${MODEL_FILE}" \
@@ -31,7 +32,7 @@ if [ "$(docker inspect -f '{{.State.Running}}' "$CONTAINER" 2>/dev/null)" = "tru
 else
     echo "Run container $CONTAINER ..."
     docker rm -f "$CONTAINER" >/dev/null 2>&1 || true
-    docker run -d -p "${SERVICE_PORT}:${SERVICE_PORT}" --user "$RUN_USER_ID" --name "$CONTAINER" "$IMAGE"
+    docker run -d -p "${SERVICE_PORT}:${SERVICE_PORT}" --user "$TEST_USER_ID" --name "$CONTAINER" "$IMAGE"
 fi
 
 echo "Waiting for server ready ..."

@@ -11,6 +11,10 @@
 
 ### Changed
 
+- Запуск сервера переведён на `ENTRYPOINT ["llama-server"]` с конфигурацией через переменные окружения `LLAMA_ARG_*` вместо shell-обёртки в `CMD`.
+- В образе создаётся пользователь `${SERVICE_NAME}` (UID 10001), используемый по умолчанию; скрипты продолжают запускать контейнер от `TEST_USER_ID`.
+- Значение `MAX_TOKENS` по умолчанию в `Dockerfile` изменено на `32768` (при сборке переопределяется из `config.properties`); удалены OCI-метки образа.
+- `README.md` и `CHANGELOG.md` актуализированы под текущую конфигурацию образа и скриптов.
 - Модель заменена с `Qwen2.5-3B-Instruct Q4_K_M` на `Qwen3-4B-Instruct-2507 Q4_K_M` (`unsloth/Qwen3-4B-Instruct-2507-GGUF`).
 - Обновлены `MODEL_SHA256` и алиас модели в API: `qwen2.5-3b-instruct` → `default`.
 - Версия сервиса увеличена до `1.1` (тег `editorbank/laiser:1.1`).
